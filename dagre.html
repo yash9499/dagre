@@ -1,0 +1,291 @@
+<!doctype html>
+
+<meta charset="utf-8">
+<title>Dagre D3 Demo: TCP State Diagram</title>
+
+<script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="http://cpettitt.github.io/project/dagre-d3/latest/dagre-d3.js"></script>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<style id="css">
+body {
+  font: 300 14px 'Helvetica Neue', Helvetica;
+}
+.node rect {
+  stroke: #333;
+  fill: #fff;
+}
+.edgePath path {
+  stroke: #333;
+  fill: #333;
+  stroke-width: 1.5px;
+}
+
+/************<script src="https://dagrejs.github.io/project/dagre-d3/latest/dagre-d3.min.js"></script>******************/
+
+/* Toggle this class - hide and show the popup */
+.tooltip .show {
+    visibility: visible;
+    -webkit-animation: fadeIn 1s;
+    animation: fadeIn 1s;
+}
+
+text.tooltip {	
+    position: absolute;			
+    text-align: center;			
+    width: fit-content;	
+    			
+    height:fit-content;					
+    padding: 6px;				
+    font: 12px sans-serif;		
+    background: grey;	
+    border: 0px;		
+    border-radius: 8px;			
+    pointer-events: none;			
+}
+
+</style>
+
+
+<body>
+    
+<svg width=960 transform="translate(40,10)"><g></g></svg>
+
+<script id="js">
+// Create a new directed graph
+var g = new dagreD3.graphlib.Graph().setGraph({});
+// States and transitions from RFC 793
+var states = [ "CLOSED", "LISTEN", "SYNRCVD", "SYNSENT",
+               "ESTAB", "FINWAIT1", "CLOSEWAIT", "FINWAIT2",
+               "CLOSING", "LASTACK", "TIMEWAIT" ];
+// Automatically label each of the nodes
+states.forEach(function(state,index) {g.setNode(state, { label: state }); });
+// Set up the edges
+g.setEdge("CLOSED",     "LISTEN",     { label: "open" });
+g.setEdge("LISTEN",     "SYNRCVD",   { label: "rcv SYN" });
+g.setEdge("LISTEN",     "SYNSENT",   { label: "send" });
+g.setEdge("LISTEN",     "CLOSED",     { label: "close" });
+g.setEdge("SYNRCVD",   "FINWAIT1",  { label: "close" });
+g.setEdge("SYNRCVD",   "ESTAB",      { label: "rcv ACK of SYN" });
+g.setEdge("SYNSENT",   "SYNRCVD",   { label: "rcv SYN" });
+g.setEdge("SYNSENT",   "ESTAB",      { label: "rcv SYN, ACK" });
+g.setEdge("SYNSENT",   "CLOSED",     { label: "close" });
+g.setEdge("ESTAB",      "FINWAIT1",  { label: "close" });
+g.setEdge("ESTAB",      "CLOSEWAIT", { label: "rcv FIN" });
+g.setEdge("FINWAIT1",  "FINWAIT2",  { label: "rcv ACK of FIN" });
+g.setEdge("FINWAIT1",  "CLOSING",    { label: "rcv FIN" });
+g.setEdge("CLOSEWAIT", "LASTACK",   { label: "close" });
+g.setEdge("FINWAIT2",  "TIMEWAIT",  { label: "rcv FIN" });
+g.setEdge("CLOSING",    "TIMEWAIT",  { label: "rcv ACK of FIN" });
+g.setEdge("LASTACK",   "CLOSED",     { label: "rcv ACK of FIN" });
+g.setEdge("TIMEWAIT",  "CLOSED",     { label: "timeout=2MSL" });
+// Set some general styles
+g.nodes().forEach(function(v) {
+  var node = g.node(v);
+  node.rx = node.ry = 5;
+});
+g.edges().forEach(function (e) {
+    var edge = g.edge(e.v, e.w);
+    edge.lineInterpolate = 'basis';
+});
+// Add some custom colors based on state
+g.node('CLOSED').style = "fill: #f77";
+g.node('ESTAB').style = "fill: #7f7";
+var svg = d3.select("svg"),
+    inner = svg.select("g");
+// Set up zoom support
+// var zoom = d3.zoom().on("zoom", function() {
+//       inner.attr("transform", d3.event.transform);
+//     });
+// svg.call(zoom);
+var zoom = d3.behavior.zoom().on("zoom", function () {
+    inner.attr("transform", "translate(" + d3.event.translate + ")" +
+        "scale(" + d3.event.scale + ")");
+});
+svg.call(zoom);
+// Create the renderer
+var render = new dagreD3.render();
+// Run the renderer. This is what draws the final graph.
+render(inner, g);
+// Center the graph
+var initialScale = 0.75;
+zoom.translate([(svg.attr("width") - g.graph().width * initialScale) / 2, 20])
+    .scale(initialScale)
+    .event(svg);
+svg.attr("height", g.graph().height * initialScale + 40);
+// svg.call(zoom.transform, d3.zoomIdentity.translate((svg.attr("width") - g.graph().width * initialScale) / 2, 20).scale(initialScale));
+// svg.attr('height', g.graph().height * initialScale + 40);
+//var a = svg.selectAll("g.node").append("p").attr("class","popuptext").attr("id","myPopup").style("opacity",0);
+
+
+
+
+var div = d3.select("body").append("div")	
+    .attr("class", "tooltip")				
+    ;
+var text = div.append("text").attr("class","tooltip").style("opacity", 0);
+
+svg.selectAll("g.node").on("click", function(id) { var _node = g.node(id); 
+  myfunction(id);
+
+   })
+   .on("mouseout", function(d) {		
+            text.transition()		
+                .duration(500)		
+                .style("opacity", 0);	
+        });
+   function myfunction(id){
+//        console.log("yash"+id);
+//        var popup = open("", "Popup", "width=300,height=200");
+
+// var aOk = popup.document.createElement("a");
+// aOk.innerHTML = id;
+
+
+// popup.document.body.appendChild(aOk);
+text.transition()		
+                .duration(200)
+                .attr("text-anchor","end")		
+                .style("opacity", .9);		
+            text	.html(id)	
+                .style("left", (d3.event.pageX) + "px")		
+                .style("top", (d3.event.pageY - 28) + "px");	
+            					
+      
+   }
+
+svg.selectAll("g.node rect")
+    .attr("id", function (d) {
+    return "node" + d;
+});
+svg.selectAll("g.edgePath path")
+    .attr("id", function (e) {
+    return e.v + "-" + e.w;
+});
+svg.selectAll("g.edgeLabel g")
+    .attr("id", function (e) {
+    return 'label_'+e.v + "-" + e.w;
+});
+
+g.nodes().forEach(function (v) {
+    var node = g.node(v);
+    node.customId = "node" + v;
+})
+g.edges().forEach(function (e) {
+    var edge = g.edge(e.v, e.w);
+    edge.customId = e.v + "-" + e.w
+});
+
+
+var nodeDrag = d3.behavior.drag()
+    .on("dragstart", dragstart)
+    .on("drag", dragmove);
+
+var edgeDrag = d3.behavior.drag()
+    .on("dragstart", dragstart)
+    .on('drag', function (d) {
+    translateEdge(g.edge(d.v, d.w), d3.event.dx, d3.event.dy);
+    $('#' + g.edge(d.v, d.w).customId).attr('d', calcPoints(d));
+});
+
+nodeDrag.call(svg.selectAll("g.node"));
+edgeDrag.call(svg.selectAll("g.edgePath"));
+
+function dragstart(d) {
+    d3.event.sourceEvent.stopPropagation();
+}
+
+function dragmove(d) {
+    var node = d3.select(this),
+        selectedNode = g.node(d);
+    var prevX = selectedNode.x,
+        prevY = selectedNode.y;
+
+    selectedNode.x += d3.event.dx;
+    selectedNode.y += d3.event.dy;
+    node.attr('transform', 'translate(' + selectedNode.x + ',' + selectedNode.y + ')');
+
+    var dx = selectedNode.x - prevX,
+        dy = selectedNode.y - prevY;
+
+    g.edges().forEach(function (e) {
+        if (e.v == d || e.w == d) {
+            edge = g.edge(e.v, e.w);
+            translateEdge(g.edge(e.v, e.w), dx, dy);
+            $('#' + edge.customId).attr('d', calcPoints(e));
+            label = $('#label_' + edge.customId);
+			var xforms = label.attr('transform');
+            if (xforms != "") {
+                var parts  = /translate\(\s*([^\s,)]+)[ ,]?([^\s,)]+)?/.exec(xforms);
+                var X = parseInt(parts[1])+dx, Y = parseInt(parts[2])+dy;
+                console.log(X,Y);
+                if (isNaN(Y)) {
+                    Y = dy;
+                }
+                label.attr('transform','translate('+X+','+Y+')');
+            }            
+        }
+    })
+}
+
+
+function translateEdge(e, dx, dy) {
+    e.points.forEach(function (p) {
+        p.x = p.x + dx;
+        p.y = p.y + dy;
+    });
+}
+
+//taken from dagre-d3 source code (not the exact same)
+function calcPoints(e) {
+    var edge = g.edge(e.v, e.w),
+        tail = g.node(e.v),
+        head = g.node(e.w);
+    var points = edge.points.slice(1, edge.points.length - 1);
+    var afterslice = edge.points.slice(1, edge.points.length - 1)
+    points.unshift(intersectRect(tail, points[0]));
+    points.push(intersectRect(head, points[points.length - 1]));
+    return d3.svg.line()
+        .x(function (d) {
+        return d.x;
+    })
+        .y(function (d) {
+        return d.y;
+    })
+        .interpolate("basis")
+    (points);
+}
+
+//taken from dagre-d3 source code (not the exact same)
+function intersectRect(node, point) {
+    var x = node.x;
+    var y = node.y;
+    var dx = point.x - x;
+    var dy = point.y - y;
+    var w = $("#" + node.customId).attr('width') / 2;
+    var h = $("#" + node.customId).attr('height') / 2;
+    var sx = 0,
+        sy = 0;
+    if (Math.abs(dy) * w > Math.abs(dx) * h) {
+        // Intersection is top or bottom of rect.
+        if (dy < 0) {
+            h = -h;
+        }
+        sx = dy === 0 ? 0 : h * dx / dy;
+        sy = h;
+    } else {
+        // Intersection is left or right of rect.
+        if (dx < 0) {
+            w = -w;
+        }
+        sx = w;
+        sy = dx === 0 ? 0 : w * dy / dx;
+    }
+    return {
+        x: x + sx,
+        y: y + sy
+    };
+}
+</script>
+
+</body>
